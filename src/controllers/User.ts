@@ -2,8 +2,8 @@ import { Request, Response } from 'express';
 import db from '../models';
 import { v4 as uuidv4 } from 'uuid';
 import jwt from 'jsonwebtoken';
-// import session from 'express-session';
-// import sessionMap from '../middleware/sessionStore';
+import session from 'express-session';
+import sessionMap from '../middleware/sessionStore';
 
 declare module 'express-session' {
   interface SessionData {
@@ -73,34 +73,39 @@ export const loginUser = async (req: Request, res: Response) => {
   const { email, password } = req.body;
   // Dummy authentication: replace with real user lookup
   if (email && password) {
-    /*
+    
     // SESSION AUTH START
-    // import sessionMap from '../middleware/sessionStore';
     // const sessionUUID = uuidv4();
     // req.session.uuid = sessionUUID;
     // req.session.username = email;
     // sessionMap.set(sessionUUID, { email });
-    // res.cookie('uuid', sessionUUID, { httpOnly: true });
+    // // res.cookie('uuid', sessionUUID, { httpOnly: true });
     // res.json({ message: 'Login successful', uuid: sessionUUID });
     // SESSION AUTH END
-    */
+    
     // Find user in DB to get role
     const user = await User.findOne({ where: { email } });
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
     // JWT AUTH START
     const accessToken = jwt.sign(
-      { email: user.email, role: user.role },
+      { email: user.email, 
+        role: user.role 
+
+      },
       process.env.JWT_SECRET || 'default_jwt_secret',
       { expiresIn: '15m' }
     );
     const refreshToken = jwt.sign(
-      { email: user.email, role: user.role },
+      { email: user.email, 
+        role: user.role 
+
+      },
       process.env.JWT_REFRESH_SECRET || 'default_jwt_refresh_secret',
       { expiresIn: '7d' }
     );
     // Optionally store refreshToken in DB or memory for invalidation
     res.json({ message: 'Login successful', accessToken, refreshToken });
-    // JWT AUTH END
+    // // JWT AUTH END
   } else {
     res.status(401).json({ error: 'Invalid credentials' });
   }

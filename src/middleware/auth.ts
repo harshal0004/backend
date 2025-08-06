@@ -1,11 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
-// import sessionMap from './sessionStore';
+import sessionMap from './sessionStore';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 dotenv.config();
 
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
-  /*
+  
   // SESSION AUTH START
   // if (req.session && req.session.uuid && sessionMap.has(req.session.uuid)) {
   //   next();
@@ -13,7 +13,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   //   res.status(401).json({ error: 'Unauthorized: No valid session' });
   // }
   // SESSION AUTH END
-  */
+  
   // JWT AUTH START
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Expect Bearer <token>

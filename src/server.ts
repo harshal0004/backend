@@ -11,7 +11,7 @@ const app: Application = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
-app.use(cookieParser());
+// app.use(cookieParser());
 // app.use(session({
 //   secret: process.env.SESSION_SECRET || 'default_secret',
 //   resave: false,
