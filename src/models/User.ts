@@ -56,13 +56,16 @@ module.exports = (sequelize: Sequelize, DataTypes: any) => {
       },
       role: {
         type: DataTypes.ENUM('customer', 'admin'),
-        defaultValue: 'user',
+        defaultValue: 'customer',
       },
     },
     {
       sequelize,
       modelName: 'User',
       tableName: 'Users',
+      defaultScope: {
+        attributes: { exclude: ['password'] },
+      },
       hooks: {
         beforeCreate: async (user: any) => {
           if (user.password) {

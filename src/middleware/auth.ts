@@ -20,11 +20,11 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!token) {
     return res.status(401).json({ error: 'Unauthorized: No token provided' });
   }
-  jwt.verify(token, process.env.JWT_SECRET || 'default_jwt_secret', (err, user) => {
+  jwt.verify(token, process.env.JWT_SECRET || 'default_jwt_secret', (err, decoded: any) => {
     if (err) {
       return res.status(403).json({ error: 'Forbidden: Invalid token' });
     }
-    (req as any).user = user;
+    (req as any).user = { id: decoded.id, email: decoded.email, role: decoded.role };
     next();
   });
   // JWT AUTH END

@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import jwt from 'jsonwebtoken';
 import session from 'express-session';
 import sessionMap from '../middleware/sessionStore';
+import bcrypt from 'bcryptjs';
 
 declare module 'express-session' {
   interface SessionData {
@@ -73,33 +74,29 @@ export const loginUser = async (req: Request, res: Response) => {
   const { email, password } = req.body;
   // Dummy authentication: replace with real user lookup
   if (email && password) {
-    
     // SESSION AUTH START
     // const sessionUUID = uuidv4();
     // req.session.uuid = sessionUUID;
     // req.session.username = email;
     // sessionMap.set(sessionUUID, { email });
-    // // res.cookie('uuid', sessionUUID, { httpOnly: true });
     // res.json({ message: 'Login successful', uuid: sessionUUID });
     // SESSION AUTH END
-    
-    // Find user in DB to get role
-    const user = await User.findOne({ where: { email } });
+
+    // Find user in DB with password (override default scope)
+    const user = await db.User.unscoped().findOne({ where: { email } });
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) return res.status(401).json({ error: 'Invalid credentials' });
+
     // JWT AUTH START
     const accessToken = jwt.sign(
-      { email: user.email, 
-        role: user.role 
-
-      },
+      { id: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET || 'default_jwt_secret',
       { expiresIn: '15m' }
     );
     const refreshToken = jwt.sign(
-      { email: user.email, 
-        role: user.role 
-
-      },
+      { id: user.id, email: user.email, role: user.role },
       process.env.JWT_REFRESH_SECRET || 'default_jwt_refresh_secret',
       { expiresIn: '7d' }
     );
@@ -120,11 +117,54 @@ export const refreshAccessToken = (req: Request, res: Response) => {
     (err: jwt.VerifyErrors | null, user: any) => {
       if (err) return res.status(403).json({ error: 'Invalid refresh token' });
       const newAccessToken = jwt.sign(
-        { email: user.email },
+        { id: user.id, email: user.email, role: user.role },
         process.env.JWT_SECRET || 'default_jwt_secret',
         { expiresIn: '15m' }
       );
       res.json({ accessToken: newAccessToken });
     }
   );
+};
+
+export const getMe = async (req: Request, res: Response) => {
+  const authUser = (req as any).user;
+  if (!authUser || !authUser.id) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  try {
+    const me = await User.findByPk(authUser.id);
+    if (!me) return res.status(404).json({ error: 'User not found' });
+    res.json(me);
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+};
+
+export const getMyOrders = async (req: Request, res: Response) => {
+  const authUser = (req as any).user;
+  if (!authUser || !authUser.id) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  try {
+    const orders = await db.Order.findAll({
+      where: { userId: authUser.id },
+      include: [
+        {
+          model: db.OrderItem,
+          as: 'orderItems',
+          include: [
+            {
+              model: db.Product,
+              as: 'product',
+              attributes: ['id', 'name', 'price'],
+            },
+          ],
+        },
+      ],
+      order: [['createdAt', 'DESC']],
+    });
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
 };
